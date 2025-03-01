@@ -22,8 +22,10 @@ A fully-featured web application for discovering and browsing GitHub repositorie
 - Filter repositories by language, stars, date, and more
 - Sort repositories by stars, forks, updates, or help-wanted issues
 - Pagination for browsing large sets of results
-- Save favorite repositories for quick access
+- Save favorite repositories with persistent storage
 - Share repositories via Web Share API or clipboard
+- API rate limit tracking with visual indicators
+- Usage analytics and event tracking
 
 ### UI/UX Features
 - Responsive design for all screen sizes
