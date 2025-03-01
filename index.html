@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Browsealizer Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo-container">
+                <i class="fab fa-github"></i>
+                <h1>GitHub Browsealizer Pro</h1>
+            </div>
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search repositories...">
+                </div>
+                <button id="search-button">Search</button>
+            </div>
+            <div class="filter-toggle">
+                <button id="filter-button"><i class="fas fa-filter"></i> Filters</button>
+            </div>
+        </header>
+        
+        <div id="filters-panel" class="hidden">
+            <div class="filter-section">
+                <h3>Language</h3>
+                <select id="language-filter">
+                    <option value="">All Languages</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="go">Go</option>
+                    <option value="rust">Rust</option>
+                    <option value="c++">C++</option>
+                    <option value="c#">C#</option>
+                    <option value="php">PHP</option>
+                    <option value="ruby">Ruby</option>
+                </select>
+            </div>
+            <div class="filter-section">
+                <h3>Sort By</h3>
+                <select id="sort-filter">
+                    <option value="stars">Stars</option>
+                    <option value="forks">Forks</option>
+                    <option value="updated">Recently Updated</option>
+                    <option value="help-wanted-issues">Help Wanted Issues</option>
+                </select>
+            </div>
+            <div class="filter-section">
+                <h3>Created Since</h3>
+                <select id="date-filter">
+                    <option value="">Any Time</option>
+                    <option value="daily">Today</option>
+                    <option value="weekly">This Week</option>
+                    <option value="monthly">This Month</option>
+                    <option value="yearly">This Year</option>
+                </select>
+            </div>
+            <div class="filter-section">
+                <h3>Minimum Stars</h3>
+                <input type="range" id="stars-filter" min="0" max="50000" step="1000" value="0">
+                <span id="stars-value">0</span>
+            </div>
+            <div class="filter-actions">
+                <button id="apply-filters">Apply Filters</button>
+                <button id="reset-filters">Reset</button>
+            </div>
+        </div>
+        
+        <div class="content-container">
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Explore</h3>
+                    <ul class="sidebar-list">
+                        <li class="active" data-category="trending"><i class="fas fa-fire"></i> Trending</li>
+                        <li data-category="stars"><i class="fas fa-star"></i> Most Starred</li>
+                        <li data-category="recent"><i class="fas fa-clock"></i> Recently Updated</li>
+                        <li data-category="recommendations"><i class="fas fa-thumbs-up"></i> Recommended</li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Topics</h3>
+                    <ul class="sidebar-list topic-list">
+                        <li data-topic="machine-learning"><i class="fas fa-brain"></i> Machine Learning</li>
+                        <li data-topic="web-development"><i class="fas fa-globe"></i> Web Development</li>
+                        <li data-topic="mobile-development"><i class="fas fa-mobile-alt"></i> Mobile Apps</li>
+                        <li data-topic="devops"><i class="fas fa-server"></i> DevOps</li>
+                        <li data-topic="game-development"><i class="fas fa-gamepad"></i> Game Dev</li>
+                        <li data-topic="data-science"><i class="fas fa-chart-bar"></i> Data Science</li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Favorites</h3>
+                    <div id="favorites-container">
+                        <p class="empty-favorites">No favorites yet</p>
+                    </div>
+                </div>
+                <div class="sidebar-section settings">
+                    <h3>Settings</h3>
+                    <div class="setting-option">
+                        <label for="dark-mode-toggle">Dark Mode</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-option">
+                        <label for="recommendation-toggle">Recommendation Popups</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="recommendation-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-option">
+                        <label for="popup-frequency">Popup Frequency</label>
+                        <select id="popup-frequency">
+                            <option value="5000">Very Frequent</option>
+                            <option value="10000" selected>Normal</option>
+                            <option value="20000">Less Frequent</option>
+                            <option value="30000">Rare</option>
+                        </select>
+                    </div>
+                </div>
+            </aside>
+            
+            <main>
+                <div class="content-header">
+                    <h2 id="content-title">Trending Repositories</h2>
+                    <div class="view-options">
+                        <button id="grid-view-btn" class="active"><i class="fas fa-th-large"></i></button>
+                        <button id="list-view-btn"><i class="fas fa-list"></i></button>
+                    </div>
+                </div>
+                
+                <div class="loading-spinner hidden" id="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading repositories...</p>
+                </div>
+                
+                <div id="repositories-container" class="grid-view"></div>
+                
+                <div id="pagination-container" class="hidden">
+                    <button id="prev-page" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                    <div id="page-numbers"></div>
+                    <button id="next-page">Next <i class="fas fa-chevron-right"></i></button>
+                </div>
+                
+                <div id="recommendation-popup" class="hidden">
+                    <div class="popup-content">
+                        <div class="popup-header">
+                            <h3>Recommended Repository</h3>
+                            <span class="close-btn"><i class="fas fa-times"></i></span>
+                        </div>
+                        <div class="popup-body">
+                            <h4 id="popup-title"></h4>
+                            <p id="popup-description"></p>
+                            <div id="popup-stats"></div>
+                            <div class="tag-container" id="popup-tags"></div>
+                            <div class="popup-actions">
+                                <button id="view-repo-btn" class="primary-btn"><i class="fas fa-external-link-alt"></i> View Repository</button>
+                                <button id="favorite-btn" class="secondary-btn"><i class="far fa-heart"></i> Add to Favorites</button>
+                                <button id="dismiss-btn" class="secondary-btn"><i class="fas fa-times"></i> Dismiss</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+        
+        <div id="repo-detail-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title"></h3>
+                    <span class="modal-close-btn"><i class="fas fa-times"></i></span>
+                </div>
+                <div class="modal-body">
+                    <div class="repo-detail-container">
+                        <div class="repo-overview">
+                            <p id="modal-description"></p>
+                            <div class="repo-meta" id="modal-meta"></div>
+                            <div class="tag-container" id="modal-tags"></div>
+                        </div>
+                        <div class="repo-tabs">
+                            <div class="tab-header">
+                                <button class="tab-btn active" data-tab="readme">README</button>
+                                <button class="tab-btn" data-tab="stats">Statistics</button>
+                                <button class="tab-btn" data-tab="issues">Issues</button>
+                                <button class="tab-btn" data-tab="contributors">Contributors</button>
+                            </div>
+                            <div class="tab-content">
+                                <div id="readme-tab" class="tab-pane active">
+                                    <div class="readme-placeholder">
+                                        <div class="spinner"></div>
+                                        <p>Loading README...</p>
+                                    </div>
+                                </div>
+                                <div id="stats-tab" class="tab-pane">
+                                    <div class="stats-container">
+                                        <div class="stats-chart-container">
+                                            <canvas id="commit-activity-chart"></canvas>
+                                        </div>
+                                        <div class="stats-info" id="stats-info"></div>
+                                    </div>
+                                </div>
+                                <div id="issues-tab" class="tab-pane">
+                                    <div class="issues-list" id="issues-list">
+                                        <div class="spinner"></div>
+                                        <p>Loading issues...</p>
+                                    </div>
+                                </div>
+                                <div id="contributors-tab" class="tab-pane">
+                                    <div class="contributors-list" id="contributors-list">
+                                        <div class="spinner"></div>
+                                        <p>Loading contributors...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <a id="modal-repo-link" class="primary-btn" target="_blank">
+                                <i class="fab fa-github"></i> View on GitHub
+                            </a>
+                            <button id="modal-favorite-btn" class="secondary-btn">
+                                <i class="far fa-heart"></i> Add to Favorites
+                            </button>
+                            <button id="modal-share-btn" class="secondary-btn">
+                                <i class="fas fa-share-alt"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
