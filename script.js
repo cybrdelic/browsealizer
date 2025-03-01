@@ -76,7 +76,7 @@ let state = {
     language: '',
     minStars: 0,
     dateRange: '',
-    darkMode: false,
+    lightMode: false,
     showRecommendations: true,
     recommendationFrequency: 10000,
     favorites: [],
@@ -95,10 +95,11 @@ function loadSavedState() {
             const parsedState = JSON.parse(savedState);
             state = { ...state, ...parsedState };
             
-            // Apply dark mode if it was enabled
-            if (state.darkMode) {
-                document.body.classList.add('dark-mode');
-                document.getElementById('dark-mode-toggle').checked = true;
+            // Apply light mode if it was enabled
+            if (state.lightMode) {
+                document.body.classList.add('light-mode');
+                document.documentElement.classList.add('light-mode');
+                document.getElementById('light-mode-toggle').checked = true;
             }
             
             // Restore recommendation settings
@@ -124,7 +125,7 @@ function loadSavedState() {
 // Save current state to localStorage
 function saveState() {
     const stateToSave = {
-        darkMode: state.darkMode,
+        lightMode: state.lightMode,
         showRecommendations: state.showRecommendations,
         recommendationFrequency: state.recommendationFrequency,
         view: state.view,
@@ -158,7 +159,7 @@ const listViewBtn = document.getElementById('list-view-btn');
 const prevPageBtn = document.getElementById('prev-page');
 const nextPageBtn = document.getElementById('next-page');
 const pageNumbers = document.getElementById('page-numbers');
-const darkModeToggle = document.getElementById('dark-mode-toggle');
+const lightModeToggle = document.getElementById('light-mode-toggle');
 const recommendationToggle = document.getElementById('recommendation-toggle');
 const popupFrequency = document.getElementById('popup-frequency');
 const favoritesContainer = document.getElementById('favorites-container');
@@ -173,9 +174,31 @@ const dateFilter = document.getElementById('date-filter');
 const applyFiltersBtn = document.getElementById('apply-filters');
 const resetFiltersBtn = document.getElementById('reset-filters');
 
+// Initialize keyboard navigation
+function initializeAccessibility() {
+    // Add keyboard navigation class
+    document.addEventListener('keydown', () => {
+        document.body.classList.add('keyboard-navigation');
+        setTimeout(() => {
+            document.body.classList.remove('keyboard-navigation');
+        }, 2000);
+    });
+}
+
+// Initialize interactive elements
+function initializeInteractions() {
+    // Add hover effect to repo cards
+    document.querySelectorAll('.repo-card').forEach(card => {
+        // No need for complex effects, the CSS handles hover states
+    });
+}
+
 // DOM loaded event to make sure all elements are available
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded");
+    
+    // Initialize accessibility
+    initializeAccessibility();
     
     // Event listeners for basic functionality
     searchButton.addEventListener('click', handleSearch);
@@ -243,16 +266,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Add toggle listeners for dark mode and recommendations
-    darkModeToggle.addEventListener('click', () => {
-        state.darkMode = darkModeToggle.checked;
-        if (state.darkMode) {
-            document.body.classList.add('dark-mode');
+    // Add toggle listeners for light mode and recommendations
+    lightModeToggle.addEventListener('click', () => {
+        state.lightMode = lightModeToggle.checked;
+        if (state.lightMode) {
+            document.body.classList.add('light-mode');
+            document.documentElement.classList.add('light-mode');
         } else {
-            document.body.classList.remove('dark-mode');
+            document.body.classList.remove('light-mode');
+            document.documentElement.classList.remove('light-mode');
         }
         saveState();
-        console.log("Dark mode toggled:", state.darkMode);
+        console.log("Light mode toggled:", state.lightMode);
     });
     
     recommendationToggle.addEventListener('click', () => {
@@ -420,13 +445,75 @@ function updateRateLimitDisplay() {
     }
 }
 
+// Add loading effect to the whole page for initial load experience
+function showInitialLoadingEffect() {
+    // Create fullscreen loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'fullscreen-loading';
+    loadingOverlay.innerHTML = `
+        <div class="loading-content">
+            <div class="loading-logo">
+                <i class="fab fa-github"></i>
+            </div>
+            <div class="loading-text">
+                <h2>GitHub Browsealizer Pro</h2>
+                <p>Initializing application...</p>
+            </div>
+            <div class="loading-progress-container">
+                <div class="loading-progress-bar"></div>
+            </div>
+            <div class="loading-stats">
+                <span class="loading-stat" id="loading-stat-api">API Connection</span>
+                <span class="loading-stat" id="loading-stat-repos">Loading Repositories</span>
+                <span class="loading-stat" id="loading-stat-interface">Interface Modules</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(loadingOverlay);
+    
+    // Animate progress bar
+    const progressBar = document.querySelector('.loading-progress-bar');
+    const loadingStats = {
+        api: document.getElementById('loading-stat-api'),
+        repos: document.getElementById('loading-stat-repos'),
+        interface: document.getElementById('loading-stat-interface')
+    };
+    
+    setTimeout(() => {
+        progressBar.style.width = '30%';
+        loadingStats.api.classList.add('loading-stat-complete');
+    }, 500);
+    
+    setTimeout(() => {
+        progressBar.style.width = '60%';
+        loadingStats.repos.classList.add('loading-stat-complete');
+    }, 1500);
+    
+    setTimeout(() => {
+        progressBar.style.width = '100%';
+        loadingStats.interface.classList.add('loading-stat-complete');
+    }, 2500);
+    
+    // Hide overlay with animation
+    setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => {
+            loadingOverlay.remove();
+        }, 500);
+    }, 3000);
+}
+
 // Initialize with popular repositories
 window.addEventListener('DOMContentLoaded', () => {
+    // Start with loading effect
+    showInitialLoadingEffect();
+    
     loadSavedState();
     
     // Initial analytics tracking
     trackEvent('app_loaded', {
-        dark_mode: state.darkMode,
+        light_mode: state.lightMode,
         view_mode: state.view
     });
     
@@ -764,9 +851,42 @@ function displayRepositories(repositories) {
                </div>`
             : '';
         
+        // Calculate activity score (0-100) based on stars, forks, and recency
+        // This is used for UI effects to highlight more active/popular repos
+        const updatedDate = new Date(repo.updated_at);
+        const now = new Date();
+        const daysSinceUpdate = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
+        
+        // Scale: newer = higher score (max 33)
+        const recencyScore = Math.max(0, 33 - Math.min(30, daysSinceUpdate));
+        
+        // Scale: more stars = higher score (max 34)
+        const starsScore = Math.min(34, (Math.log10(repo.stargazers_count + 1) * 10));
+        
+        // Scale: more forks = higher score (max 33)
+        const forksScore = Math.min(33, (Math.log10(repo.forks_count + 1) * 10));
+        
+        // Total score (0-100)
+        const activityScore = Math.floor(recencyScore + starsScore + forksScore);
+        
+        repoCard.dataset.activityScore = activityScore;
+        
+        // Customize card based on activity score
+        const borderAccent = activityScore > 70 ? 
+            `border-image: linear-gradient(to bottom, var(--primary-color), var(--neon-purple)) 1;` : '';
+        const glowEffect = activityScore > 80 ? 
+            `box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 20px rgba(0, 240, 255, 0.2);` : '';
+            
+        if (activityScore > 70) {
+            repoCard.classList.add('high-activity');
+        }
+        
+        repoCard.style = `${borderAccent} ${glowEffect}`;
+        
         repoCard.innerHTML = `
             <h2 class="repo-title">
                 <a href="${repo.html_url}" target="_blank">${repo.full_name}</a>
+                ${activityScore > 85 ? '<span class="trending-badge"><i class="fas fa-fire"></i> Trending</span>' : ''}
             </h2>
             <p class="repo-description">${repo.description || 'No description available'}</p>
             ${tagsHtml}
@@ -783,6 +903,9 @@ function displayRepositories(repositories) {
         
         reposContainer.appendChild(repoCard);
     });
+    
+    // Initialize interactive elements
+    initializeInteractions();
 }
 
 // Format date for display
