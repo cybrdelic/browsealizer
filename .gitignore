@@ -1,0 +1,22 @@
+# System files
+.DS_Store
+Thumbs.db
+.env
+
+# Node modules (in case you add npm packages later)
+node_modules/
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
