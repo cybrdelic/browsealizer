@@ -1,6 +1,69 @@
 // GitHub API endpoint for searching repositories
 const GITHUB_API = 'https://api.github.com';
 
+// API rate limiting and tracking
+const apiTracker = {
+    rateLimit: {
+        limit: 60,        // Default GitHub API rate limit for unauthenticated requests
+        remaining: 60,    // Remaining requests
+        resetTime: null   // Time when the rate limit resets
+    },
+    requestCount: 0,      // Total requests made in this session
+    requestLog: [],       // Log of recent API requests
+    lastUpdated: null,    // Last time rate limit info was updated
+    
+    // Track API request
+    trackRequest(url) {
+        this.requestCount++;
+        // Keep only the 10 most recent requests
+        if (this.requestLog.length >= 10) {
+            this.requestLog.shift();
+        }
+        this.requestLog.push({
+            url: url,
+            timestamp: new Date()
+        });
+    },
+    
+    // Update rate limit information from API response headers
+    updateRateLimits(headers) {
+        if (headers.get('x-ratelimit-limit')) {
+            this.rateLimit.limit = parseInt(headers.get('x-ratelimit-limit'));
+            this.rateLimit.remaining = parseInt(headers.get('x-ratelimit-remaining'));
+            this.rateLimit.resetTime = new Date(parseInt(headers.get('x-ratelimit-reset')) * 1000);
+            this.lastUpdated = new Date();
+            
+            // Update rate limit display
+            updateRateLimitDisplay();
+            
+            // Warn user if rate limit is getting low
+            if (this.rateLimit.remaining < 10) {
+                showToast(`API rate limit getting low: ${this.rateLimit.remaining} requests remaining`, 'warning');
+            }
+        }
+    },
+    
+    // Check if we're rate limited
+    isRateLimited() {
+        return this.rateLimit.remaining <= 0;
+    },
+    
+    // Get time until rate limit reset
+    getTimeUntilReset() {
+        if (!this.rateLimit.resetTime) return 'unknown';
+        
+        const now = new Date();
+        const diffMs = this.rateLimit.resetTime - now;
+        
+        if (diffMs <= 0) return 'soon';
+        
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffSecs = Math.floor((diffMs % 60000) / 1000);
+        
+        return `${diffMins}m ${diffSecs}s`;
+    }
+};
+
 // App state
 let state = {
     currentCategory: 'trending',
@@ -299,9 +362,94 @@ modalCloseBtn.addEventListener('click', () => {
     }, 300);
 });
 
+// Analytics tracking function
+function trackEvent(eventName, eventData = {}) {
+    const trackingData = {
+        event: eventName,
+        timestamp: new Date().toISOString(),
+        page: window.location.pathname,
+        ...eventData
+    };
+    
+    console.log('Analytics event:', trackingData);
+    
+    // In a real app, you would send this to your analytics service
+    // Example: fetch('/api/analytics', { method: 'POST', body: JSON.stringify(trackingData) });
+    
+    // Store locally for this session
+    if (!window.analyticsEvents) {
+        window.analyticsEvents = [];
+    }
+    window.analyticsEvents.push(trackingData);
+}
+
+// Update the rate limit display in the UI
+function updateRateLimitDisplay() {
+    const rateLimitElement = document.getElementById('rate-limit-display');
+    if (rateLimitElement) {
+        const resetTime = apiTracker.getTimeUntilReset();
+        
+        // Add warning class if remaining requests are low
+        const warningClass = apiTracker.rateLimit.remaining < 10 ? ' warning' : '';
+        
+        // Update the display with current rate limit info
+        rateLimitElement.innerHTML = `
+            <div class="rate-limit-count${warningClass}">
+                ${apiTracker.rateLimit.remaining}/${apiTracker.rateLimit.limit}
+            </div>
+            <div class="rate-limit-reset">
+                Reset: ${resetTime}
+            </div>
+        `;
+        
+        // Add title attribute for tooltip
+        rateLimitElement.title = `GitHub API Rate Limit: ${apiTracker.rateLimit.remaining} of ${apiTracker.rateLimit.limit} requests remaining. Resets in ${resetTime}.`;
+        
+        // Make clickable to show rate limit info toast
+        rateLimitElement.style.cursor = 'pointer';
+        rateLimitElement.onclick = () => {
+            showToast(`GitHub API rate limit: ${apiTracker.rateLimit.remaining}/${apiTracker.rateLimit.limit}. Resets in ${resetTime}.`, 'info');
+            
+            // Show more detailed info in console
+            console.log('API usage stats:', {
+                rateLimit: apiTracker.rateLimit,
+                totalRequests: apiTracker.requestCount,
+                recentRequests: apiTracker.requestLog
+            });
+        };
+    }
+}
+
 // Initialize with popular repositories
 window.addEventListener('DOMContentLoaded', () => {
     loadSavedState();
+    
+    // Initial analytics tracking
+    trackEvent('app_loaded', {
+        dark_mode: state.darkMode,
+        view_mode: state.view
+    });
+    
+    // Check current API rate limit
+    fetch(`${GITHUB_API}/rate_limit`)
+        .then(response => {
+            apiTracker.updateRateLimits(response.headers);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Rate limit info:', data);
+            if (data.resources && data.resources.core) {
+                apiTracker.rateLimit.limit = data.resources.search.limit;
+                apiTracker.rateLimit.remaining = data.resources.search.remaining;
+                apiTracker.rateLimit.resetTime = new Date(data.resources.search.reset * 1000);
+                apiTracker.lastUpdated = new Date();
+                updateRateLimitDisplay();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching rate limit:', error);
+        });
+    
     loadRepositories();
     startRecommendationCycle();
     
@@ -345,6 +493,23 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
     showLoading();
     console.log("Loading repos with topic:", state.currentTopic, "category:", state.currentCategory);
     
+    // Check if we're rate limited
+    if (apiTracker.isRateLimited()) {
+        const resetTime = apiTracker.getTimeUntilReset();
+        showToast(`GitHub API rate limit exceeded. Try again in ${resetTime}.`, 'error');
+        reposContainer.innerHTML = `
+            <div class="rate-limit-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3>API Rate Limit Exceeded</h3>
+                <p>GitHub API limits unauthenticated requests to ${apiTracker.rateLimit.limit} per hour.</p>
+                <p>Rate limit will reset in ${resetTime}.</p>
+                <p>Please try again later.</p>
+            </div>
+        `;
+        hideLoading();
+        return;
+    }
+
     try {
         let endpoint = `${GITHUB_API}/search/repositories?`;
         let queryParams = [];
@@ -361,13 +526,19 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
             // Category query
             switch(state.currentCategory) {
                 case 'trending':
-                    queryParams.push('q=created:>2023-01-01');
+                    const oneMonthAgo = new Date();
+                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                    const dateStr = oneMonthAgo.toISOString().split('T')[0];
+                    queryParams.push(`q=created:>${dateStr}`);
                     break;
                 case 'stars':
                     queryParams.push('q=stars:>5000');
                     break;
                 case 'recent':
-                    queryParams.push('q=pushed:>2023-06-01');
+                    const oneWeekAgo = new Date();
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                    const recentDateStr = oneWeekAgo.toISOString().split('T')[0];
+                    queryParams.push(`q=pushed:>${recentDateStr}`);
                     break;
                 case 'recommendations':
                     // Use a mix of popular repositories from different domains
@@ -425,29 +596,62 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
         // Construct final URL
         const url = endpoint + queryParams.join('&');
         
-        const response = await fetch(url);
-        const data = await response.json();
+        // Track this API request
+        apiTracker.trackRequest(url);
         
-        if (data.items && data.items.length > 0) {
-            // Calculate total pages
-            state.totalPages = Math.min(Math.ceil(data.total_count / state.itemsPerPage), 34); // GitHub API limits to 1000 results (34 pages of 30 items)
+        // Make the API request with a timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
             
-            // Cache repositories
-            data.items.forEach(repo => {
-                state.repoCache[repo.id] = repo;
-            });
+            // Update rate limits from response headers
+            apiTracker.updateRateLimits(response.headers);
             
-            // Display repositories
-            displayRepositories(data.items);
+            const data = await response.json();
             
-            // Update pagination
-            updatePagination();
-            
-            // Generate recommendations
-            generateRecommendations(data.items);
-        } else {
-            reposContainer.innerHTML = '<p class="no-results">No repositories found.</p>';
-            paginationContainer.classList.add('hidden');
+            if (data.items && data.items.length > 0) {
+                // Calculate total pages
+                state.totalPages = Math.min(Math.ceil(data.total_count / state.itemsPerPage), 34); // GitHub API limits to 1000 results (34 pages of 30 items)
+                
+                // Cache repositories
+                data.items.forEach(repo => {
+                    state.repoCache[repo.id] = repo;
+                });
+                
+                // Display repositories
+                displayRepositories(data.items);
+                
+                // Update pagination
+                updatePagination();
+                
+                // Generate recommendations
+                generateRecommendations(data.items);
+                
+                // Analytics tracking
+                trackEvent('search_results', {
+                    query: searchQuery || state.currentTopic || state.currentCategory,
+                    result_count: data.items.length,
+                    total_count: data.total_count
+                });
+            } else {
+                reposContainer.innerHTML = '<p class="no-results">No repositories found.</p>';
+                paginationContainer.classList.add('hidden');
+                
+                // Analytics tracking for no results
+                trackEvent('search_no_results', {
+                    query: searchQuery || state.currentTopic || state.currentCategory
+                });
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                reposContainer.innerHTML = '<p class="no-results">Request timed out. Please try again later.</p>';
+                showToast('Request timed out. Please try again.', 'error');
+            } else {
+                throw error; // Re-throw for the outer catch block
+            }
         }
     } catch (error) {
         console.error('Error fetching repositories:', error);
@@ -610,6 +814,14 @@ function formatDate(dateString) {
 async function openRepoDetails(repo) {
     // Set the active repo
     state.activeRepo = repo;
+    
+    // Track analytics event
+    trackEvent('view_repository_details', {
+        repo_id: repo.id,
+        repo_name: repo.full_name,
+        repo_stars: repo.stargazers_count,
+        repo_language: repo.language || 'none'
+    });
     
     // Update modal content
     document.getElementById('modal-title').textContent = repo.full_name;
@@ -1000,12 +1212,22 @@ function addToFavorites(repo) {
         state.favorites.push({
             id: repo.id,
             name: repo.full_name,
-            url: repo.html_url
+            url: repo.html_url,
+            addedAt: new Date().toISOString(),
+            language: repo.language,
+            stars: repo.stargazers_count
         });
         
         saveState();
         renderFavorites();
         showToast('Repository added to favorites', 'success');
+        
+        // Track analytics
+        trackEvent('add_favorite', {
+            repo_id: repo.id,
+            repo_name: repo.full_name,
+            total_favorites: state.favorites.length
+        });
     }
 }
 
@@ -1013,9 +1235,21 @@ function addToFavorites(repo) {
 function removeFromFavorites(repo) {
     if (!repo) return;
     
+    // Find the repo in favorites for analytics
+    const repoToRemove = state.favorites.find(fav => fav.id === repo.id);
+    
     state.favorites = state.favorites.filter(fav => fav.id !== repo.id);
     saveState();
     renderFavorites();
+    
+    // Track analytics
+    if (repoToRemove) {
+        trackEvent('remove_favorite', {
+            repo_id: repoToRemove.id,
+            repo_name: repoToRemove.name,
+            total_favorites: state.favorites.length
+        });
+    }
 }
 
 // Render favorites in sidebar
@@ -1106,6 +1340,12 @@ function generateRecommendations(repositories) {
 function showNextRecommendation() {
     if (!state.showRecommendations) return;
     
+    // Check if we're rate limited
+    if (apiTracker.isRateLimited()) {
+        console.log('Skipping recommendations due to rate limiting');
+        return;
+    }
+    
     if (state.recommendationQueue.length === 0) {
         // If we've shown all recommendations, regenerate from cache
         generateRecommendations();
@@ -1115,6 +1355,12 @@ function showNextRecommendation() {
             return;
         }
     }
+    
+    // Track recommendations
+    trackEvent('show_recommendation', {
+        queue_length: state.recommendationQueue.length,
+        frequency: state.recommendationFrequency
+    });
     
     // Get the next recommendation
     const repo = state.recommendationQueue.shift();

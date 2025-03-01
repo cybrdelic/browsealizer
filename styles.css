@@ -412,6 +412,45 @@ main {
     color: var(--text-color);
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.rate-limit-info {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.rate-limit-count {
+    font-weight: 500;
+}
+
+.rate-limit-count.warning {
+    color: var(--warning-color);
+}
+
+.rate-limit-reset {
+    color: var(--text-light);
+    font-size: 0.75rem;
+}
+
+.rate-limit-info:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .rate-limit-info:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
 .view-options {
     display: flex;
     gap: 0.5rem;
@@ -1180,6 +1219,40 @@ main {
 
 .hidden {
     display: none !important;
+}
+
+.no-results {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.rate-limit-error {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-background);
+    margin: 2rem auto;
+    max-width: 600px;
+}
+
+.rate-limit-error i {
+    font-size: 3rem;
+    color: var(--warning-color);
+    margin-bottom: 1rem;
+}
+
+.rate-limit-error h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.rate-limit-error p {
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
 }
 
 /* Responsive styles */
