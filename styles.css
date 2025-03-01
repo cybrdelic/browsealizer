@@ -639,17 +639,7 @@ main {
     position: relative;
 }
 
-/* Add a pseudo-element for the brutalist depth effect */
-main::before {
-    content: '';
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: -8px;
-    bottom: -8px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
+/* No depth effect */
 
 .content-header {
     display: flex;
@@ -753,17 +743,8 @@ main::before {
     position: relative;
 }
 
-/* Dimensional effect for cards */
-.repo-card::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    right: -4px;
-    bottom: -4px;
-    background-color: var(--border-color);
-    z-index: -1;
-    transition: all var(--transition-fast);
+.repo-card {
+    min-height: 220px; /* Fixed height to prevent layout shift */
 }
 
 .repo-card:hover {
@@ -771,22 +752,8 @@ main::before {
     border-color: var(--white);
 }
 
-.repo-card:hover::before {
-    top: 8px;
-    left: 8px;
-    right: -8px;
-    bottom: -8px;
-}
-
 .repo-card:active {
     transform: translateY(-2px);
-}
-
-.repo-card:active::before {
-    top: 6px;
-    left: 6px;
-    right: -6px;
-    bottom: -6px;
 }
 
 .repo-title {
@@ -996,27 +963,8 @@ main::before {
     overflow: hidden;
 }
 
-/* Add dimensional effect to popup */
-#recommendation-popup::before {
-    content: '';
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: -8px;
-    bottom: -8px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
-
 #recommendation-popup:hover {
     transform: translateY(-4px);
-}
-
-#recommendation-popup:hover::before {
-    top: 12px;
-    left: 12px;
-    right: -12px;
-    bottom: -12px;
 }
 
 @keyframes slideUp {
@@ -1203,17 +1151,7 @@ main::before {
     position: relative;
 }
 
-/* Add dimensional effect to modal */
-.modal-content::before {
-    content: '';
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    right: -12px;
-    bottom: -12px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
+/* No dimensional effect */
 
 @keyframes zoomIn {
     from {
@@ -1513,32 +1451,10 @@ main::before {
     position: relative;
 }
 
-/* Dimensional effect for items */
-.issue-item::before,
-.contributor-item::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    right: -4px;
-    bottom: -4px;
-    background-color: var(--border-color);
-    z-index: -1;
-    transition: all var(--transition-fast);
-}
-
 .issue-item:hover, 
 .contributor-item:hover {
     transform: translateY(-4px);
     border-color: var(--white);
-}
-
-.issue-item:hover::before,
-.contributor-item:hover::before {
-    top: 8px;
-    left: 8px;
-    right: -8px;
-    bottom: -8px;
 }
 
 .contributor-avatar {
@@ -1633,17 +1549,7 @@ main::before {
     position: relative;
 }
 
-/* Add dimensional effect to toast */
-.toast::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    right: -4px;
-    bottom: -4px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
+/* No dimensional effect */
 
 @keyframes slideInLeft {
     from {
@@ -1727,17 +1633,7 @@ main::before {
     position: relative;
 }
 
-/* Add dimensional effect to error */
-.rate-limit-error::before {
-    content: '';
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: -8px;
-    bottom: -8px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
+/* No dimensional effect */
 
 .rate-limit-error i {
     font-size: 3rem;
@@ -1789,17 +1685,7 @@ main::before {
     position: relative;
 }
 
-/* Add dimensional effect to loading content */
-.loading-content::before {
-    content: '';
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    right: -12px;
-    bottom: -12px;
-    background-color: var(--border-color);
-    z-index: -1;
-}
+/* No dimensional effect */
 
 .loading-logo {
     font-size: 4rem;
@@ -2016,15 +1902,5 @@ main::before {
         transform: none !important;
     }
     
-    .repo-card::before,
-    .issue-item::before,
-    .contributor-item::before,
-    #recommendation-popup::before,
-    .toast::before,
-    .modal-content::before,
-    .loading-content::before,
-    .rate-limit-error::before,
-    main::before {
-        display: none !important;
-    }
+    /* No dimensional effects to disable */
 }
