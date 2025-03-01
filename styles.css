@@ -378,11 +378,11 @@ header {
     border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input[type="checkbox"]:checked + .toggle-slider {
     background-color: var(--primary-color);
 }
 
-input:checked + .toggle-slider:before {
+input[type="checkbox"]:checked + .toggle-slider:before {
     transform: translateX(20px);
 }
 

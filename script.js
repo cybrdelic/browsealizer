@@ -110,19 +110,102 @@ const dateFilter = document.getElementById('date-filter');
 const applyFiltersBtn = document.getElementById('apply-filters');
 const resetFiltersBtn = document.getElementById('reset-filters');
 
-// Event listeners for basic functionality
-searchButton.addEventListener('click', handleSearch);
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleSearch();
+// DOM loaded event to make sure all elements are available
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM fully loaded");
+    
+    // Event listeners for basic functionality
+    searchButton.addEventListener('click', handleSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+    closeBtn.addEventListener('click', hideRecommendation);
+    viewRepoBtn.addEventListener('click', () => {
+        if (viewRepoBtn.dataset.url) {
+            window.open(viewRepoBtn.dataset.url, '_blank');
+        }
+    });
+    favoriteBtn.addEventListener('click', () => addToFavorites(state.activeRepo));
+    dismissBtn.addEventListener('click', hideRecommendation);
+    
+    // Attach event listeners for all sidebar items
+    Array.from(sidebarItems).forEach(item => {
+        console.log("Attaching click to sidebar item:", item.dataset.category);
+        item.addEventListener('click', function() {
+            console.log("Sidebar item clicked:", this.dataset.category);
+            
+            // Remove active class from all items
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            topicItems.forEach(i => i.classList.remove('active'));
+            
+            // Add active class to clicked item
+            this.classList.add('active');
+            
+            // Update state
+            state.currentCategory = this.dataset.category;
+            state.currentTopic = null;
+            state.currentPage = 1;
+            
+            // Update content title
+            contentTitle.textContent = this.textContent.trim();
+            
+            // Load repositories for the selected category
+            loadRepositories();
+        });
+    });
+    
+    // Attach event listeners for all topic items
+    Array.from(topicItems).forEach(item => {
+        console.log("Attaching click to topic item:", item.dataset.topic);
+        item.addEventListener('click', function() {
+            console.log("Topic item clicked:", this.dataset.topic);
+            
+            // Remove active class from all items
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            topicItems.forEach(i => i.classList.remove('active'));
+            
+            // Add active class to clicked item
+            this.classList.add('active');
+            
+            // Update state
+            state.currentCategory = null;
+            state.currentTopic = this.dataset.topic;
+            state.currentPage = 1;
+            
+            // Update content title
+            contentTitle.textContent = this.textContent.trim() + ' Repositories';
+            
+            // Load repositories for the selected topic
+            loadRepositories();
+        });
+    });
+    
+    // Add toggle listeners for dark mode and recommendations
+    darkModeToggle.addEventListener('click', () => {
+        state.darkMode = darkModeToggle.checked;
+        if (state.darkMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        saveState();
+        console.log("Dark mode toggled:", state.darkMode);
+    });
+    
+    recommendationToggle.addEventListener('click', () => {
+        state.showRecommendations = recommendationToggle.checked;
+        saveState();
+        
+        if (!state.showRecommendations) {
+            hideRecommendation();
+        } else if (state.recommendationQueue.length > 0) {
+            showNextRecommendation();
+        } else {
+            generateRecommendations();
+        }
+        console.log("Recommendations toggled:", state.showRecommendations);
+    });
 });
-closeBtn.addEventListener('click', hideRecommendation);
-viewRepoBtn.addEventListener('click', () => {
-    if (viewRepoBtn.dataset.url) {
-        window.open(viewRepoBtn.dataset.url, '_blank');
-    }
-});
-favoriteBtn.addEventListener('click', () => addToFavorites(state.activeRepo));
-dismissBtn.addEventListener('click', hideRecommendation);
 
 // Event listeners for filter panel
 filterButton.addEventListener('click', () => {
@@ -161,51 +244,7 @@ starsFilter.addEventListener('input', () => {
     starsValue.textContent = starsFilter.value;
 });
 
-// Sidebar navigation
-sidebarItems.forEach(item => {
-    item.addEventListener('click', () => {
-        // Remove active class from all items
-        sidebarItems.forEach(i => i.classList.remove('active'));
-        topicItems.forEach(i => i.classList.remove('active'));
-        
-        // Add active class to clicked item
-        item.classList.add('active');
-        
-        // Update state
-        state.currentCategory = item.dataset.category;
-        state.currentTopic = null;
-        state.currentPage = 1;
-        
-        // Update content title
-        contentTitle.textContent = item.textContent.trim();
-        
-        // Load repositories for the selected category
-        loadRepositories();
-    });
-});
-
-// Topic navigation
-topicItems.forEach(item => {
-    item.addEventListener('click', () => {
-        // Remove active class from all items
-        sidebarItems.forEach(i => i.classList.remove('active'));
-        topicItems.forEach(i => i.classList.remove('active'));
-        
-        // Add active class to clicked item
-        item.classList.add('active');
-        
-        // Update state
-        state.currentCategory = null;
-        state.currentTopic = item.dataset.topic;
-        state.currentPage = 1;
-        
-        // Update content title
-        contentTitle.textContent = item.textContent.trim() + ' Repositories';
-        
-        // Load repositories for the selected topic
-        loadRepositories();
-    });
-});
+// These are moved to the DOMContentLoaded event now
 
 // View switching (grid/list)
 gridViewBtn.addEventListener('click', () => {
@@ -245,30 +284,7 @@ nextPageBtn.addEventListener('click', () => {
     }
 });
 
-// Dark mode toggle
-darkModeToggle.addEventListener('change', () => {
-    state.darkMode = darkModeToggle.checked;
-    if (state.darkMode) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
-    saveState();
-});
-
-// Recommendation settings
-recommendationToggle.addEventListener('change', () => {
-    state.showRecommendations = recommendationToggle.checked;
-    saveState();
-    
-    if (!state.showRecommendations) {
-        hideRecommendation();
-    } else if (state.recommendationQueue.length > 0) {
-        showNextRecommendation();
-    } else {
-        generateRecommendations();
-    }
-});
+// These settings event listeners are also moved to DOMContentLoaded
 
 popupFrequency.addEventListener('change', () => {
     state.recommendationFrequency = parseInt(popupFrequency.value);
@@ -327,6 +343,7 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
     }
     
     showLoading();
+    console.log("Loading repos with topic:", state.currentTopic, "category:", state.currentCategory);
     
     try {
         let endpoint = `${GITHUB_API}/search/repositories?`;
@@ -335,9 +352,11 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
         if (searchQuery) {
             // Search query
             queryParams.push(`q=${encodeURIComponent(searchQuery)}`);
+            console.log("Search query:", searchQuery);
         } else if (state.currentTopic) {
             // Topic query
             queryParams.push(`q=topic:${encodeURIComponent(state.currentTopic)}`);
+            console.log("Using topic:", state.currentTopic);
         } else {
             // Category query
             switch(state.currentCategory) {
@@ -357,6 +376,7 @@ async function loadRepositories(resetPage = true, searchQuery = null) {
                 default:
                     queryParams.push('q=stars:>1000');
             }
+            console.log("Using category:", state.currentCategory);
         }
         
         // Add filters
